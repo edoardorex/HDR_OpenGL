@@ -1,101 +1,86 @@
-# HDR_OpenGL
-* Progetto di Computer Graphichs & 3D
-* Realizzazione di una stanza con OpenGL e di un oggetto molto luminoso posto al centro
-* Confronto di tecniche HDR con tone mapping per gestione della luminosità e del colore
+# HDR and Tone Mapping in OpenGL
 
-## Utilizzo
-1. Scaricare la seguente repository e unzip di 'HDR_OpenGL-main'
-2. Scaricare glm da [Google Drive](https://drive.google.com/drive/folders/1WHGnKOe_OktN5xeseHJauRhnvlLcQpEf?usp=sharing), unzip e trascinare la cartella 'glm' nella repository precedentemente scaricata in "../OpenGL_HDR-main/includes"
-3. Scaricare [Visual Studio Community](https://visualstudio.microsoft.com/it/vs/) ed installare l'IDE (È necessario avere già un compilatore C++ come MinGW,..)
-4. Aprire infine in Visual Studio Community la cartella 'HDR_OpenGL-main' tramite l'opzione "Aprire una cartella locale"
-5. Selezionare eseguibile e lanciare (Selezione e poi Ctrl+F5)
-6. L'implementazione è contenuta all'interno di './HDR_OpenGL-main/src/OpenGL/HDR/' assieme ai relativi Shader 
+An interactive computer-graphics coursework scene that compares standard
+display-range rendering with **Reinhard** and **exposure-based** tone mapping.
+A bright central object illuminates a textured room, making highlight clipping
+and tone-mapping differences easy to inspect.
 
+## Rendering pipeline
 
-## Problema
-* I valori di luminosità e colore di default sono limitati ad essere nell'intervallo 0.0 e 1.0 nel framebuffer.
-* Se la somma di multiple sorgenti luminose eccede il valore 1.0 il risultato che si ha normalmente è che si blocca il valore a 1.0
-* Come risultato si hanno vaste aree molto bianche che rendono la scena irreale 
+The scene is rendered to an `RGBA16F` floating-point framebuffer so lighting
+values can exceed `1.0`. A fullscreen pass maps those values into display range:
 
-### Oggetto Luminoso
-* Al centro della scena è stato posto un oggetto che emette molta luce
-````c
-lightPositions.push_back(glm::vec3(0.0f, -0.6f, 0.0f)); //the position of sun cube
-lightColors.push_back(glm::vec3(15.0f, 15.0f, 15.0f)); //exceed number 1.0
-````
-
-## Soluzione
-* Si permette ai valori di eccedere temporaneamente il valore 1.0 e si trasformano successivamente tramite tone mapping nell'intervallo corretto senza perdere dettagli
-### Reinhard Tone Mapping
-````c
+```glsl
+// Reinhard
 result = hdrColor / (hdrColor + vec3(1.0));
 
-````
-
-### Exposure Tone Mapping
-````c
+// Exposure
 result = vec3(1.0) - exp(-hdrColor * exposure);
-````
 
-### Gamma Correction
-````c
-result = pow(result, vec3(1.0 / gamma));
-FragColor = vec4(result, 1.0);
-````
+// Gamma correction
+result = pow(result, vec3(1.0 / 2.2));
+```
 
+See [hdr.cpp](src/OpenGL/HDR/hdr.cpp) for the scene and
+[hdr.fs](src/OpenGL/HDR/hdr.fs) for the tone-mapping implementation.
 
-## Comandi implementati
-Possibilità di muoversi all'interno della scena 3D e di modificare Tone Mapping:
-* **A** spostamento a sinistra
-* **S** indietro
-* **D** destra
-* **W** avanti
-* **Q** decremento del valore di esposizione
-* **E** aumento del valore di esposizione
-* **M** cambio metodo da Reinhard a Exposure ciclico
-* **SPACE** disattivazione/attivazione HDR con rispettivo metodo di tone mapping
-* **Mouse** muove la scena
-* **Scroll** zoom in/out 
-* **Esc** termina l'esecuzione
+## Requirements and build
 
-## Esecuzione Esempio
-* Si mostra di seguito una esecuzione con tone mapping Exposure attivo
-![Esecuzione HDR_OpenGL](https://media.giphy.com/media/yp70JVbU0uIpFor3AU/giphy.gif)
+- A graphics driver supporting **OpenGL 3.3 core**.
+- A C++11-capable compiler and compatible CMake installation.
+- GLFW, GLM, and Assimp discoverable by the supplied CMake modules.
+- The additional libraries linked by your platform branch in
+  [CMakeLists.txt](CMakeLists.txt), including FreeType and, on Windows, irrKlang.
+- The included GLAD/stb_image sources and the repository's textures and shaders.
 
+Use the official [GLM project](https://github.com/g-truc/glm) for missing GLM
+headers and configure their include path. The repository contains
+platform-specific libraries; these are not portable across operating systems,
+architectures, or compiler ABIs.
 
-## HDR Off
-<p align="center">
-  <img src="https://github.com/edoardore/HDR_OpenGL/blob/main/screenshot/off.png" width="650" title="HDR Off">
-</p>
+The original build uses CMake 2.8 policy settings. For the commands below, use a
+compatible **CMake 3.x version, 3.13 or newer**. CMake 4 may require updating the
+legacy policy declarations before configuration succeeds.
 
-## Reinhard Tone Mapping
-<p align="center">
-  <img src="https://github.com/edoardore/HDR_OpenGL/blob/main/screenshot/reinhard.png" width="650" title="Reinhard">
-</p>
+```sh
+cmake -S . -B build
+cmake --build build --target OpenGL__HDR
+```
 
+Launch the executable from its generated `bin/OpenGL` directory, or the
+configuration subdirectory used by your generator. Keep the copied shaders in
+the working directory and the original texture tree available. These relative
+shader paths are required at runtime.
 
-## Exposure = 0.033
-<p align="center">
-  <img src="https://github.com/edoardore/HDR_OpenGL/blob/main/screenshot/exp033.png" width="650" title="Exposure 0.033">
-</p>
+## Controls
 
-## HDR Off
-<p align="center">
-  <img src="https://github.com/edoardore/HDR_OpenGL/blob/main/screenshot/off%20(2).png" width="650" title="HDR Off">
-</p>
+| Input | Action |
+| --- | --- |
+| `W`, `A`, `S`, `D` | Move the camera |
+| Mouse | Look around |
+| Scroll | Zoom |
+| `Space` | Toggle HDR |
+| `M` | Switch Reinhard/exposure tone mapping |
+| `Q`, `E` | Decrease/increase exposure |
+| `Esc` | Exit |
 
-## Reinhard Tone Mapping
-<p align="center">
-  <img src="https://github.com/edoardore/HDR_OpenGL/blob/main/screenshot/reinhard%20(2).png" width="650" title="Reinhard">
-</p>
+Exposure changes affect the exposure-based method, not the Reinhard formula.
+The program prints current HDR, exposure, and method settings to the console.
 
+## Original visual examples
 
-## Exposure = 0.033
-<p align="center">
-  <img src="https://github.com/edoardore/HDR_OpenGL/blob/main/screenshot/exp033%20(2).png" width="650" title="Exposure 0.033">
-</p>
+![Animated scene demonstration](https://media.giphy.com/media/yp70JVbU0uIpFor3AU/giphy.gif)
 
-## Exposure = 0.008
-<p align="center">
-  <img src="https://github.com/edoardore/HDR_OpenGL/blob/main/screenshot/exp008.png" width="650" title="Exposure 0.008">
-</p>
+| HDR off | Reinhard | Exposure 0.033 |
+| --- | --- | --- |
+| ![HDR disabled](screenshot/off.png) | ![Reinhard mapping](screenshot/reinhard.png) | ![Exposure 0.033](screenshot/exp033.png) |
+| ![HDR disabled, second view](screenshot/off%20%282%29.png) | ![Reinhard, second view](screenshot/reinhard%20%282%29.png) | ![Exposure 0.033, second view](screenshot/exp033%20%282%29.png) |
+
+![Exposure 0.008](screenshot/exp008.png)
+
+## Project provenance
+
+This repository is a fork of
+[edoardore/HDR_OpenGL](https://github.com/edoardore/HDR_OpenGL).
+The original scene, examples, and history are preserved. Retain the notices
+and licenses of bundled third-party graphics components when redistributing.
